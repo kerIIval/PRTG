@@ -312,7 +312,7 @@ class PRTG_random(bpy.types.Panel): # a sub menu to for terrain generation which
         split = layout.split()
 
         col = split.column()
-        col.label(text="Seed:")
+        col.label(text="Random Seed:")
         
         col = split.column()
         col.prop(scene, "rand_seed", text = '') # a checkbox to select to have a specific seed
