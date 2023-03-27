@@ -194,7 +194,7 @@ class PRTG_tangram(bpy.types.Panel): # a sub menu to for terrain generation whic
         split = layout.split()
 
         col = split.column()
-        col.label(text="Longtitude:")
+        col.label(text="Longitude:")
         col = split.column(align=True)
         col.prop(scene, "long", text = '')
         
