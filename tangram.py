@@ -14,8 +14,6 @@ from pathlib import Path
 path_to_download_folder = str(os.path.join(Path.home(), "Downloads"))
 # a lot of imports :P
 
-
-
 def driver(res, automatic):
     options = ChromeOptions()
 
@@ -47,16 +45,18 @@ def driver(res, automatic):
     # starts up chrome with the custom options
     return driver
 
-
 def tangram(lat, long, scale, res, manual, interplvl = 0, exp = False, min = 0, max = 8848, ocean = False):
     link = "https://tangrams.github.io/heightmapper/#"+str(scale)+'/'+str(lat) +'/'+str(long)
 
+
+    
     render = 1
     a = res
-    while a > 900: 
-        render += 1
-        a = res / render
-    
+    if a > 100:
+        while a > 900: 
+            render += 1
+            a = res / render
+    render = str(render)
     # the purpose of this while loop is to reduce the size of the browser window, instead increase the render scale to get the desired resolution heightmap
 
     a = int(a)
@@ -71,101 +71,118 @@ def tangram(lat, long, scale, res, manual, interplvl = 0, exp = False, min = 0, 
 
 
     wd.get(link)
-    # opens tangram 
+    # opens tangram website
+     
+    render_setter(wd, render) # sets the render scale
 
-    action = ActionChains(wd) 
-    # allows the code to send action chains    
-  
-    
-    # the following statements set the render scale necessary for the desired resolution
+    if not exp:
+        customHeights(wd, max, min) # sets custom heights if wanted
+    if ocean: 
+        oceanData(wd) # enables ocean data if wanted
+    if manual:
+        manual_exec(wd, render, interplvl, res) # calls manual execution
+    else:
+        automatic_exec(wd, render, interplvl, res) # otherwise does it automatically
+         
+def render_setter(wd, render):
+    el = WebDriverWait(wd, timeout=3).until(lambda d: d.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[9]/div/div/div[1]/input")) # WebDriverWait is used to allow the website to load before scraping
+    # the comments here are backup code
+    el.clear()
+    # el.send_keys('1')
+    # el.send_keys(Keys.ENTER)
 
-# the following comments are backup code in case I need it
-    # el = False
-    # i = True
-    # while i: 
-    #     print("waiting")
+    # while el.get_attribute("value") == '1':
     #     time.sleep(1)
-    #     el = WebDriverWait(wd, timeout=3).until(lambda d: d.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[9]/div/div/div[1]/input"))
-    #     if el != False:
-    #         i = False
-    el = WebDriverWait(wd, timeout=3).until(lambda d: d.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[9]/div/div/div[1]/input"))
+    # el.send_keys(Keys.BACK_SPACE)
+    el.send_keys(render)
+    el.send_keys(Keys.ENTER)
 
-    el.send_keys(Keys.BACK_SPACE)
+def customHeights(wd, max, min):
+    # as the website has already loaded webdriverwait isn't needed anymore
+    checkbox = wd.find_element(By.XPATH, "/html/body/div[5]/div/ul/li[4]/div/div/input")
+    checkbox.send_keys(Keys.SPACE) # unchecks auto exposure allowing for custom max and min heights
 
-    el.send_keys(str(render))
+    el = wd.find_element(By.XPATH,"//html//body//div[5]//div//ul//li[2]//div//div//div[1]//input")
+
+    # erases the field so that the minimum wanted height can be inputted
+    el.clear()
+
+    el.send_keys(str(min))
+    # set and confirm the minimum elevation
+    el.send_keys(Keys.ENTER)
+
+    # the following statements repeat the same instruction but for the max elevation
+    el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[1]/div/div/div[1]/input")
+
+    el.clear()
+
+    el.send_keys(str(max))
 
     el.send_keys(Keys.ENTER)
 
-    if not exp:
-        # as the website has already loaded we don't need webdriverwait anymore
-        checkbox = wd.find_element(By.XPATH, "/html/body/div[5]/div/ul/li[4]/div/div/input")
-        checkbox.send_keys(Keys.SPACE) # unchecks auto exposure allowing for custom mx and min heights
-
-        # no need for a wait function as the elements have already loaded
-        el = wd.find_element(By.XPATH,"//html//body//div[5]//div//ul//li[2]//div//div//div[1]//input")
-
-        # erases the field so that the minimum wanted height can be inputted
-        for i in range(5):
-            el.send_keys(Keys.BACK_SPACE)
-
-        el.send_keys(str(min))
-        # set and confirm the minimum elevation
-        el.send_keys(Keys.ENTER)
-
-        # the following statements repeat the same instruction but for the max elevation
-        el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[1]/div/div/div[1]/input")
-
-        for i in range(5):
-            el.send_keys(Keys.BACK_SPACE)
-        el.send_keys(str(max))
-
-        el.send_keys(Keys.ENTER)
-
-    if ocean: # if the user has wanted ocean data as well, it will toggle it 
-        checkbox = wd.find_element(By.XPATH, "/html/body/div[5]/div/ul/li[5]/div/div/input")
-        checkbox.send_keys(Keys.SPACE)
-
-    # if the user has chosen manual execution the map can be adjusted before rendering, it allows the user to move around in the website, more precisely choose their wanted region and then render
-    if manual:        
-        for i in range(2):
+def oceanData(wd): # if the user has wanted ocean data as well, it will toggle it 
+    checkbox = wd.find_element(By.XPATH, "/html/body/div[5]/div/ul/li[5]/div/div/input")
+    checkbox.send_keys(Keys.SPACE)
         
-        # a for loop is used to wait and handle the alerts
-        # it uses a range of 2 as the website will output 2 alerts 
-        # the first iteration waits for the user to press render and to confirm the alert allowing the render to start
-        # the second iteration waits for the second alert which confirms the render to be complete, the while loop is used again to wait for the user to accept it
+def manual_exec(wd, render, interplvl, res): # if the user has chosen manual execution the map can be adjusted before rendering, it allows the user to move around in the website, more precisely choose their wanted region and then render
 
-            WebDriverWait(wd, timeout=2300).until(EC.alert_is_present()) # waits for alert
-            
-            i = True
-            while i: # halts the program until alert is handled
-                time.sleep(1)
-            
-                if EC.alert_is_present()(wd) == False:
-                    i = False
+    el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[9]/div/div/div[1]/input")
+    for i in range(2):
+        j = True
+    # a for loop is used to wait and handle the alerts
+    # it uses a range of 2 as the website will output 2 alerts 
+    # the first iteration waits for the user to press render and to confirm the alert allowing the render to start
+    # the second iteration waits for the second alert which confirms the render to be complete, the while loop is used again to wait for the user to accept it
+
+        while j == True and i == 0: # halts the program until alert is handled           
+            # the render scale is reentered here as the website will put the default value of 2. It depends on the speed of the website so this while loop is not alwayds neede
+            if el.get_attribute('value') != render:
+                el.clear()
+                el.send_keys(render)
+                el.send_keys(Keys.ENTER)
+            time.sleep(1)
+
+            if EC.alert_is_present()(wd): # once the alert is found we can exit the while loop
+                j = False
+
+        if i == 1:
+            WebDriverWait(wd, timeout=2300).until(EC.alert_is_present()) # waits for the second alert
+        
+        j = True
+        while j: # halts the program until alert is handled
+
+            if not EC.alert_is_present()(wd):
+                j = False           
 
         # the webscraping is complete, scalls the returnHeightmap function to get the downloaded image and shut down the driver
-        returnHeightmap(interplvl, res, wd)
+    returnHeightmap(interplvl, res, wd)
 
+def automatic_exec(wd, render, interplvl, res):
     # if the user has chosen automatic execution the image is rendered automatically
-    else:
-        el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[11]/div/span")
-        action.click(el).perform() # presses render
 
-        WebDriverWait(wd, timeout=234).until(EC.alert_is_present())
+    time.sleep(0.5) # this wait is there to ensure the render scale dooesn't get overriden by the website
+    action = ActionChains(wd)
+    el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[9]/div/div/div[1]/input")
+    el.clear()
+    el.send_keys(render)
+    el.send_keys(Keys.ENTER)
 
-        alert = wd.switch_to.alert
-        alert.accept() # these 3 lines wait for the confirmation to come up and accept it
+    el = wd.find_element(By.XPATH,"/html/body/div[5]/div/ul/li[11]/div/span")
+    action.click(el).perform() # presses render
 
-        WebDriverWait(wd, timeout=234).until(EC.alert_is_present())
-
-        alert = wd.switch_to.alert
-        alert.accept() # these 3 lines allow the code to know that the image has been rendered and downloaded, then it accepts that alert
-
-        # the webscraping is complete, scalls the returnHeightmap function to get the downloaded image and shut down the driver
-        returnHeightmap(interplvl, res, wd)
-
+    WebDriverWait(wd, timeout=234).until(EC.alert_is_present())
     
+    alert = wd.switch_to.alert
+    alert.accept() # these 3 lines wait for the confirmation to come up and accept it
 
+    WebDriverWait(wd, timeout=234).until(EC.alert_is_present())
+
+    alert = wd.switch_to.alert
+    alert.accept() # these 3 lines allow the code to know that the image has been rendered and downloaded, then it accepts that alert
+
+    # the webscraping is complete, scalls the returnHeightmap function to get the downloaded image and shut down the driver
+    returnHeightmap(interplvl, res, wd)
+   
 def returnHeightmap(interplvl, res, wd): # this function is used to return the downloaded heightmap to the generator or the interpolator depending on interplvl
 
     def latest_download_file(): # this function returns the latest modified file in the directory
@@ -204,9 +221,3 @@ def returnHeightmap(interplvl, res, wd): # this function is used to return the d
     else:
         from .generator import createGrid
         createGrid(res, im)
-
-    
-    
-
-
-# tangram(50,50,5,1700, True, 0, False, 0, 8848)
